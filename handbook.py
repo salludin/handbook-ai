@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from dotenv import load_dotenv
 from extract_handbook import load_pages
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
@@ -411,6 +412,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Izinkan CORS agar bisa diakses oleh frontend/klien lain di jaringan
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 def require_token(x_app_token: str = Header(default="")):
     # Untuk produksi: ganti dengan validasi token login orang tua (JWT) dari sistem Anda.
@@ -419,6 +429,15 @@ def require_token(x_app_token: str = Header(default="")):
 
 
 # ---------- Endpoint ----------
+@app.get("/")
+async def root():
+    return {
+        "status": "online",
+        "service": "Handbook AI Chatbot API",
+        "docs_url": "/docs"
+    }
+
+
 @app.post("/sessions", response_model=SessionOut)
 async def create_session(body: CreateSessionIn | None = None, _: None = Depends(require_token)):
     if len(SESSIONS) >= MAX_SESSIONS:
